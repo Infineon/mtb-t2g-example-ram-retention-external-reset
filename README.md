@@ -7,14 +7,12 @@
 ## Device
 
 The device used in this code example is:
-
-- [TRAVEO™ T2G CYT4BF Series](https://www.infineon.com/cms/en/product/microcontroller/32-bit-traveo-t2g-arm-cortex-microcontroller/32-bit-traveo-t2g-arm-cortex-for-body/traveo-t2g-cyt4bf-series/)
+- [TRAVEO™ T2G CYT4DN Series](https://www.infineon.com/cms/en/product/microcontroller/32-bit-traveo-t2g-arm-cortex-microcontroller/32-bit-traveo-t2g-arm-cortex-for-cluster/traveo-t2g-cyt4dn/)
 
 ## Board
 
 The board used for testing is:
-
-- TRAVEO™ T2G evaluation kit ([KIT_T2G-B-H_EVK](https://www.infineon.com/cms/en/product/evaluation-boards/kit_t2g-b-h_evk/), [KIT_T2G-B-H_LITE](https://www.infineon.com/cms/en/product/evaluation-boards/kit_t2g-b-h_lite/))
+- TRAVEO&trade; T2G Cluster 6M Lite Kit ([KIT_T2G_C-2D-6M_LITE](https://www.infineon.com/cms/en/product/evaluation-boards/kit_t2g_c-2d-6m_lite/))
 
 ## Scope of work
 The TRAVEO™ T2G MCU has a retention function for SRAM (Static Random-Access Memory), but after an external reset using the XRES_L pin occurs, the SRAM values cannot be retained correctly because the write buffer of the SRAM is not subject to retention. This example shows how to retain the SRAM value even after the MCU is reset by an external device.
@@ -23,7 +21,7 @@ The TRAVEO™ T2G MCU has a retention function for SRAM (Static Random-Access Me
 
 **SRAM Interface**  
 
-- Optional memory size: 1024 KB
+- Optional memory size: 640 KB
 - AXI bus interfaces:
     - In the fast clock domain for the CM7 CPUs
 - AHB-Lite bus interface:
@@ -57,17 +55,20 @@ The internal system reset is a mechanism that allows software running on any of 
 
 *Note that a value of 0x5FA should be written to the VECTKEY field of the AIRCR register before setting the SYSRESETREQ bit; otherwise, the processor ignores the write.*
 
-More details can be found in [Technical Reference Manual (TRM)](https://www.infineon.com/dgdl/?fileId=5546d4627600a6bc017600bfae720007), [Registers TRM](https://www.infineon.com/dgdl/?fileId=5546d4627600a6bc017600be2aef0004) and [Data Sheet](https://www.infineon.com/dgdl/?fileId=5546d46275b79adb0175dc8387f93228).
+More details can be found in:
+- TRAVEO&trade; T2G CYT4DN
+  - [Technical Reference Manual (TRM)](https://www.infineon.com/dgdl/?fileId=8ac78c8c8691902101869f03007d2d87)
+  - [Registers TRM](https://www.infineon.com/dgdl/?fileId=8ac78c8c8691902101869ef098052d79)
+  - [Data Sheet](https://www.infineon.com/dgdl/?fileId=8ac78c8c869190210186f0cceff43fd0)
 
 ## Hardware setup
 
 This code example has been developed for:
-- TRAVEO™ T2G evaluation kit ([KIT_T2G-B-H_EVK](https://www.infineon.com/cms/en/product/evaluation-boards/kit_t2g-b-h_evk/))<BR>
-<img src="./images/KIT_T2G-B-H_EVK.gif"/><BR>
-No changes are required from the board's default settings.
+- TRAVEO&trade; T2G Cluster 6M Lite Kit ([KIT_T2G_C-2D-6M_LITE](https://www.infineon.com/cms/en/product/evaluation-boards/kit_t2g_c-2d-6m_lite/))<BR>
 
-- TRAVEO™ T2G Body High Lite evaluation kit ([KIT_T2G-B-H_LITE](https://www.infineon.com/cms/en/product/evaluation-boards/kit_t2g-b-h_lite/))<BR>
-<img src="./images/KIT_T2G-B-H_LITE.gif"/><BR>
+**Figure 1. KIT_T2G_C-2D-6M_LITE (Top View)**
+
+<img src="./images/kit_t2g_c-2d-6m_lite.png" width="800" /><BR>
 No changes are required from the board's default settings.
 
 ## Implementation
@@ -77,15 +78,15 @@ This code example uses software reset instead of an external reset using XRES_L 
 **SRAM configuration**  
 
 - After in system initialization in main function is completed, cause for reset is get using <a href="https://infineon.github.io/mtb-pdl-cat1/pdl_api_reference_manual/html/group__group__syslib__functions.html#gac8aa61d2f8052886c676f4f592d1693d"><i>Cy_SysLib_GetResetReason()</i></a>
-    - If the cause of the reset is anything other than software reset, the reset cause is cleared by <a href="https://infineon.github.io/mtb-pdl-cat1/pdl_api_reference_manual/html/group__group__syslib__functions.html#gaebb4e952584f0c428f58f7b4dbd3ceff"><i>Cy_SysLib_ClearResetReason()</i></a>, then known data is written to SRAM_CONTROLLER1 memory location (0x28080000 to 0x280BFFFF).
+    - If the cause of the reset is anything other than software reset, the reset cause is cleared by <a href="https://infineon.github.io/mtb-pdl-cat1/pdl_api_reference_manual/html/group__group__syslib__functions.html#gaebb4e952584f0c428f58f7b4dbd3ceff"><i>Cy_SysLib_ClearResetReason()</i></a>, then known data is written to SRAM_CONTROLLER1 memory location (0x28040000 to 0x2807FFFF).
     - If the cause of the reset is due to software reset, then SRAM is put in enabled mode. In enabled mode, the data written in SRAM_CONTROLLER1 memory location is read back to check if data is retained or not. The result is then printed on the terminal and the loop starts again.
 
 **GPIO Interrupt**  
 
-The user button is configured as an interrupt source and controlled by HAL (Hardware Abstraction Layer) functions.
-- After initializing the user button by <a href="https://infineon.github.io/mtb-hal-cat1/html/group__group__hal__gpio.html#gab93322030909d3af6a9fc1a3b2eccbaa"><i>cyhal_gpio_init()</i></a>, <a href="https://infineon.github.io/mtb-hal-cat1/html/group__group__hal__gpio.html#gaaf872e66c1934c8166f386a55e74707c"><i>cyhal_gpio_register_callback()</i></a> and
-- <a href="https://infineon.github.io/mtb-hal-cat1/html/group__group__hal__gpio.html#ga0e0346810451d9940d31bb6111153593"><i>cyhal_gpio_enable_event()</i></a> enables user button events that generate button interrupts whenever user button 1 is pressed
-- *gpio_interrupt_handler()* function is the button ISR where, first the write buffer of the SRAM is flushed. Then, SRAM Retention mode is enabled. This is done by setting *CPUSS_RAM1_PWR_CTL_PWR_MODE* field of *RAM1_PWR_CTL* register. Finally, *__NVIC_SystemReset()* issues software reset.
+The user button is configured as an interrupt source and controlled by PDL (Peripheral Driver Library) functions.
+- <a href="https://infineon.github.io/mtb-pdl-cat1/pdl_api_reference_manual/html/group__group__gpio__functions__init.html#gad61553f65d4e6bd827eb6464a7913461"><i>Cy_GPIO_Pin_Init</i></a> initialize user button 1.
+- <a href="https://infineon.github.io/mtb-pdl-cat1/pdl_api_reference_manual/html/group__group__sysint__functions.html#gab2ff6820a898e9af3f780000054eea5d"><i>Cy_SysInt_Init()</i></a> and <a href="https://infineon.github.io/mtb-pdl-cat1/pdl_api_reference_manual/html/group__group__gpio__functions__interrupt.html#ga0a32bd22c79ffcea82ce97ac73d1a6da"><i>Cy_GPIO_SetInterruptMask()</i></a> initialize user button events that generate button interrupts whenever user button 1 is pressed. And *NVIC_EnableIRQ()* function enables it.
+- *Handle_GPIO_Interrupt()* function is the button ISR where, first the write buffer of the SRAM is flushed. Then, SRAM Retention mode is enabled. This is done by setting *CPUSS_RAM1_PWR_CTL_PWR_MODE* field of *RAM1_PWR_CTL* register. Finally, *__NVIC_SystemReset()* issues software reset.
 
 **Miscellaneous settings**  
 
@@ -97,7 +98,7 @@ The user button is configured as an interrupt source and controlled by HAL (Hard
 
 ## Run and Test
 
-For this code example, a terminal emulator is required for displaying outputs. Install a terminal emulator if you do not have one. Instructions in this document use [Tera Term](https://ttssh2.osdn.jp/index.html.en).
+For this code example, a terminal emulator is required for displaying outputs. Install a terminal emulator if you do not have one. Instructions in this document use [Tera Term](https://teratermproject.github.io/index-en.html).
 
 After code compilation, perform the following steps to flashing the device:
 
@@ -112,7 +113,7 @@ After code compilation, perform the following steps to flashing the device:
 
     - *Terminal output on program startup*<BR><img src="./images/terminal.PNG" width="640" />
 
-6. You can debug the example to step through the code. In the IDE, use the **[Project Name] Debug (KitProg3_MiniProg4)** configuration in the **Quick Panel**. For details, see the "Program and debug" section in the [Eclipse IDE for ModusToolbox™ software user guide](https://www.infineon.com/dgdl/?fileId=8ac78c8c8386267f0183a8d7043b58ee).
+6. You can debug the example to step through the code. In the IDE, use the **[Project Name] Debug (KitProg3_MiniProg4)** configuration in the **Quick Panel**. For details, see the "Program and debug" section in the [Eclipse IDE for ModusToolbox™ software user guide](https://www.infineon.com/dgdl/?fileId=8ac78c8c8929aa4d0189bd07dd6113f9).
 
 **Note:** **(Only while debugging)** On the CM7 CPU, some code in *main()* may execute before the debugger halts at the beginning of *main()*. This means that some code executes twice: once before the debugger stops execution, and again after the debugger resets the program counter to the beginning of *main()*. See [KBA231071](https://community.infineon.com/t5/Knowledge-Base-Articles/PSoC-6-MCU-Code-in-main-executes-before-the-debugger-halts-at-the-first-line-of/ta-p/253856) to learn about this and for the workaround.
 
@@ -120,8 +121,9 @@ After code compilation, perform the following steps to flashing the device:
 
 Relevant Application notes are:
 
-- AN235305 - GETTING STARTED WITH TRAVEO™ T2G FAMILY MCUS IN MODUSTOOLBOX™
-- [AN220152](https://www.infineon.com/dgdl/?fileId=5546d462749a7c2d01749b35f7020cfa) - How to Retain RAM Data in Reset Procedure and Low-Power Mode Transition in Traveo II Family
+- [AN235305](https://www.infineon.com/dgdl/?fileId=8ac78c8c8b6555fe018c1fddd8a72801) - Getting started with TRAVEO&trade; T2G family MCUs in ModusToolbox&trade;
+- [AN219842](https://www.infineon.com/dgdl/?fileId=5546d462749a7c2d01749b35aaf90cee) - How to Use Interrupt in TRAVEO&trade; II
+- [AN220152](https://www.infineon.com/dgdl/?fileId=5546d462749a7c2d01749b35f7020cfa) - How to Retain RAM Data in Reset Procedure and Low-Power Mode Transition in TRAVEO&trade; II Family
 
 ModusToolbox™ is available online:
 - <https://www.infineon.com/modustoolbox>
@@ -133,7 +135,7 @@ More code examples can be found on the GIT repository:
 - [TRAVEO™ T2G Code examples](https://github.com/orgs/Infineon/repositories?q=mtb-t2g-&type=all&language=&sort=)
 
 For additional trainings, visit our webpage:  
-- [TRAVEO™ T2G trainings](https://www.infineon.com/cms/en/product/microcontroller/32-bit-traveo-t2g-arm-cortex-microcontroller/32-bit-traveo-t2g-arm-cortex-for-body/traveo-t2g-cyt4bf-series/#!trainings)
+- [TRAVEO™ T2G trainings](https://www.infineon.com/cms/en/product/microcontroller/32-bit-traveo-t2g-arm-cortex-microcontroller/32-bit-traveo-t2g-arm-cortex-for-cluster/traveo-t2g-cyt4dn/#!trainings)
 
 For questions and support, use the TRAVEO™ T2G Forum:  
 - <https://community.infineon.com/t5/TRAVEO-T2G/bd-p/TraveoII>  

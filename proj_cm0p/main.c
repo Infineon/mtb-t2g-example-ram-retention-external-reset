@@ -1,6 +1,6 @@
 /**********************************************************************************************************************
  * \file main.c
- * \copyright Copyright (C) Infineon Technologies AG 2019
+ * \copyright Copyright (C) Infineon Technologies AG 2024
  *
  * Use of this file is subject to the terms of use agreed between (i) you or the company in which ordinary course of
  * business you are acting and (ii) Infineon Technologies AG or its licensees. If and as long as no such terms of use
@@ -27,7 +27,7 @@
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "cyhal.h"
+#include "cy_pdl.h"
 #include "cybsp.h"
 #include "cy_retarget_io.h"
 
@@ -35,11 +35,18 @@
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
 /* GPIO interrupt priority */
-#define GPIO_INTERRUPT_PRIORITY     (7u)
+#define GPIO_INTERRUPT_PRIORITY     (3u)
+
+/* GPIO interrupt configuration structure */
+cy_stc_sysint_t gpio_irq_cfg =
+{
+    .intrSrc = ((NvicMux3_IRQn << CY_SYSINT_INTRSRC_MUXIRQ_SHIFT) | ioss_interrupts_gpio_0_IRQn),
+    .intrPriority = GPIO_INTERRUPT_PRIORITY
+};
 
 /* SRAM Controller1 info */
-#define SRAM_CONTROLLER1_START      (0x28080000)
-#define SRAM_CONTROLLER1_END        (0x2809FFFF)
+#define SRAM_CONTROLLER1_START      (0x28040000)
+#define SRAM_CONTROLLER1_END        (0x2805FFFF)
 
 /* Delays */
 #define LONG_DELAY_MS               100u      /* in ms */
@@ -54,7 +61,7 @@
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-static void Handle_GPIO_Interrupt(void *handlerArg, cyhal_gpio_event_t event);
+void Handle_GPIO_Interrupt(void);
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
@@ -74,16 +81,6 @@ int main(void)
     cy_rslt_t result;
     uint32_t data       = 0;
     uint32_t errCount   = 0;
-    cyhal_gpio_callback_data_t gpioBtnCallbackData;
-
-#if defined (CY_DEVICE_SECURE)
-    cyhal_wdt_t wdt_obj;
-
-    /* Clear watchdog timer so that it doesn't trigger a reset */
-    result = cyhal_wdt_init(&wdt_obj, cyhal_wdt_get_max_timeout_ms());
-    CY_ASSERT(CY_RSLT_SUCCESS == result);
-    cyhal_wdt_free(&wdt_obj);
-#endif /* #if defined (CY_DEVICE_SECURE) */
 
     /* Initialize the device and board peripherals */
     result = cybsp_init();
@@ -98,14 +95,9 @@ int main(void)
     __enable_irq();
 
     /* Initialize retarget-io to use the debug UART port */
-    result = cy_retarget_io_init(CYBSP_DEBUG_UART_TX, CYBSP_DEBUG_UART_RX,
-                                 CY_RETARGET_IO_BAUDRATE);
-
-    /* retarget-io init failed. Stop program execution */
-    if (result != CY_RSLT_SUCCESS)
-    {
-        CY_ASSERT(0);
-    }
+    Cy_SCB_UART_Init(UART_HW, &UART_config, NULL);
+    Cy_SCB_UART_Enable(UART_HW);
+    cy_retarget_io_init(UART_HW);
 
     /* Checking Cause for Reset */
     uint32_t cause = Cy_SysLib_GetResetReason();
@@ -156,7 +148,7 @@ int main(void)
     }
 
     /* Initialize the user button */
-    result = cyhal_gpio_init(CYBSP_USER_BTN, CYHAL_GPIO_DIR_INPUT, CYBSP_USER_BTN_DRIVE, CYBSP_BTN_OFF);
+    result = Cy_GPIO_Pin_Init(CYBSP_USER_BTN_PORT, CYBSP_USER_BTN_PIN, &CYBSP_USER_BTN_config);
 
     /* User button init failed. Stop program execution */
     if (result != CY_RSLT_SUCCESS)
@@ -164,10 +156,12 @@ int main(void)
         CY_ASSERT(0);
     }
 
+    Cy_GPIO_SetInterruptMask(CYBSP_USER_BTN_PORT, CYBSP_USER_BTN_PIN, 1);
+
     /* Configure GPIO interrupt */
-    gpioBtnCallbackData.callback = Handle_GPIO_Interrupt;
-    cyhal_gpio_register_callback(CYBSP_USER_BTN, &gpioBtnCallbackData);
-    cyhal_gpio_enable_event(CYBSP_USER_BTN, CYHAL_GPIO_IRQ_FALL, GPIO_INTERRUPT_PRIORITY, true);
+    Cy_SysInt_Init(&gpio_irq_cfg, &Handle_GPIO_Interrupt);
+    NVIC_ClearPendingIRQ(NvicMux3_IRQn);
+    NVIC_EnableIRQ((IRQn_Type) NvicMux3_IRQn);
 
     for (;;)
     {
@@ -185,7 +179,7 @@ int main(void)
  *  void
  **********************************************************************************************************************
  */
-static void Handle_GPIO_Interrupt(void *handlerArg, cyhal_gpio_event_t event)
+void Handle_GPIO_Interrupt(void)
 {
     /* Checking SRAM Controller 1 status before setting it to Retention Mode */
     while ((CPUSS->RAM1_STATUS & CPUSS_RAM1_STATUS_WB_EMPTY_Msk) == 0)
@@ -197,7 +191,7 @@ static void Handle_GPIO_Interrupt(void *handlerArg, cyhal_gpio_event_t event)
     CPUSS->RAM1_PWR_CTL = PWR_MODE_RETAINED;
 
     printf("Triggering Software Reset \r\n");
-    cyhal_system_delay_ms(LONG_DELAY_MS);
+    Cy_SysLib_Delay(LONG_DELAY_MS);
 
     /* Triggering SoftReset */
     __NVIC_SystemReset();

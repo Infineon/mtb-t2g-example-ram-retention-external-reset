@@ -7,7 +7,7 @@
 #
 ################################################################################
 # \copyright
-# Copyright 2018-2022, Cypress Semiconductor Corporation (an Infineon company)
+# Copyright 2022-2024, Cypress Semiconductor Corporation (an Infineon company)
 # SPDX-License-Identifier: Apache-2.0
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
+
+include ../common.mk
 
 ################################################################################
 # Basic Configuration
@@ -55,7 +57,7 @@ VERBOSE=
 COMPONENTS=
 
 # Like COMPONENTS, but disable optional code that was enabled by default.
-DISABLE_COMPONENTS+=XMC7xDUAL_CM0P_SLEEP
+DISABLE_COMPONENTS+=XMC7xDUAL_CM0P_SLEEP CM0P_SLEEP
 
 # Set this application to run at the CM7_0
 CORE=CM7
@@ -102,7 +104,14 @@ LDFLAGS=
 LDLIBS=
 
 # Path to the linker script to use (if empty, use the default linker script).
-LINKER_SCRIPT=
+ifeq ($(TOOLCHAIN),GCC_ARM)
+    LINKER_SCRIPT_EXT:=ld
+else ifeq ($(TOOLCHAIN),ARM)
+    LINKER_SCRIPT_EXT:=sct
+else ifeq ($(TOOLCHAIN),IAR)
+    LINKER_SCRIPT_EXT:=icf
+endif
+LINKER_SCRIPT=$(MTB_TOOLS__TARGET_DIR)/COMPONENT_$(CORE)/TOOLCHAIN_$(TOOLCHAIN)/linker_d.$(LINKER_SCRIPT_EXT)
 
 # Custom pre-build commands to run.
 PREBUILD=
@@ -138,7 +147,5 @@ CY_GETLIBS_SHARED_NAME=mtb_shared
 # The default depends on the selected TOOLCHAIN (GCC_ARM uses the ModusToolbox
 # IDE provided compiler by default).
 CY_COMPILER_PATH=
-
-include ../common.mk
 
 include $(CY_TOOLS_DIR)/make/start.mk
